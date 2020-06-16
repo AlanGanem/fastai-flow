@@ -92,6 +92,14 @@ def main():
         st.markdown('**dados faltantes :**')
         st.table(exploracao[exploracao['NA #'] != 0][['tipos', 'NA %']])
 
+        options = list(df.columns)
+        values = options # list(range(0,len(df.columns)))
+        dic = dict(zip(options, values))
+
+        a = st.sidebar.selectbox('Escolha sua variável dependente', options, format_func=lambda x: dic[x])
+
+        st.write(a)
+
 
 if __name__ == '__main__':
     main()
