@@ -1,13 +1,18 @@
 import streamlit as st
 import pandas as pd
+import seaborn as sns
+
+# from pipeline import ClassificationPipeline
 
 
 
 def main():
-    st.title('ABraInBev')
+    # st.title('ABraInBev')
+
+    st.image('logo.png', width=300)
 
     st.header('Um framework de Deep Learning acessível')
-    st.text('Desenvolvido por Alanzera e Murilo Men - Analytics CSC')
+    st.text('Desenvolvido por Alan Ganem e Murilo Mendonça - Analytics CSC')
 
     # st.text('Este é um texto com \n quebras de linhas')
     # print('meu print!')
@@ -65,7 +70,7 @@ def main():
     if file is not None:
         # print('sd') - os prints realizados dentro desse script estarão exibidos no console que abri o streamlit run
         # OBJETVO DE PRINTAR O NOME DO ARQUIVO st.markdown('ARQUIVO'+file.__name__+'UPADO')
-        st.markdown('ARQUIVO UPADO')
+        st.markdown('ARQUIVO CARREGADO')
     ############### DF
         st.header('\n Reading DataFrame')
 
@@ -74,7 +79,7 @@ def main():
         st.subheader('SLIDER')
         slider = st.slider('Quantas linhas você deseja ver ? ', 5, 50, 5)
         # st - dataframe#
-        st.subheader('ST DATA FRAME')
+        st.subheader('CONJUNTO DE DADOS')
         st.dataframe(df.head(slider))
         # st - table
 
@@ -83,25 +88,60 @@ def main():
         st.markdown('** Contagem dos tipos de dados:**')
         st.write(exploracao.tipos.value_counts())
         #explorando
-        st.markdown('**colunas float:**')
+        st.markdown('**colunas FLOAT:**')
         st.markdown(list(exploracao[exploracao['tipos'] == 'float64']['nomes']))
 
-        st.markdown('**colunas string:**')
+        st.markdown('**colunas TEXTO:**')
         st.markdown(list(exploracao[exploracao['tipos'] == 'object']['nomes']))
 
         st.markdown('**dados faltantes :**')
         st.table(exploracao[exploracao['NA #'] != 0][['tipos', 'NA %']])
 
-        dep_var = st.button('Escolha variavel depentente')
-        if dep_var:
 
-            options = list(df.columns)
-            values = options # list(range(0,len(df.columns)))
-            dic = dict(zip(options, values))
+        options = list(df.columns)
+        values = options # list(range(0,len(df.columns)))
+        dic = dict(zip(options, values))
 
-            a = st.sidebar.selectbox('Escolha sua variável dependente', options, format_func=lambda x: dic[x])
 
-            st.write(a)
+
+        a = st.sidebar.selectbox('Escolha qual variável gostaria de plotar ', options, format_func=lambda x: dic[x])
+
+        # model_setup = {
+
+        #     'date_col':'DatadoDocumento',
+        #     'model_id':'teste1',
+        #     'dependent_vars': a,
+        #     'cat_features': ['IVAPC','PEP','Filial','Material','UF','TpImposto','UFUnd'],
+        #     'num_features': [],
+        #     'train_frac_split':0.9,
+        #     'pd_encoding':'ansi',
+        #     'pd_sep':',',
+        #     'date_col':None,
+        #     'fastai_cycles':12,
+        #     'cat_emb_szs': {
+        #         'IVAPC':10,
+        #         'PEP': 2,
+        #         'Filial':10,
+        #         'Material':40,
+        #         'UF': 10,
+        #         'TpImposto': 2,
+        #         'UFUnd':10
+        #     },
+        #     'fastai_bs':512
+        # }
+
+        st.write('A variável escolhida foi ' + str(a))
+
+        train_model = st.button('Plotar histograma')
+
+        if train_model:
+            # model = ClassificationPipeline(**model_setup)
+            # model.fit(data=df)
+            sns.distplot(df[a])
+            st.pyplot()
+
+
+
 
 
 if __name__ == '__main__':

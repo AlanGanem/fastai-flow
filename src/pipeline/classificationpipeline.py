@@ -86,7 +86,6 @@ class ClassificationPipeline(BasePipeline):
             st.write('loading data...')
             data = load_csv(TRAIN_DATA_PATH, encoding=self.pd_encoding, sep=self.pd_sep)
 
-
         # feature eng can be defined via heritance
         data = self.build_features(data)
 
