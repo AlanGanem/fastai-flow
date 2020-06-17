@@ -70,7 +70,7 @@ class ClassificationPipeline(BasePipeline):
 
     def load_and_preprocess_predict(self, PREDICT_DATA_PATH:PathOrStr = None, data = None):
 
-        if not data:
+        if  data.__class__ == type(None):
             print('loading data...')
             data = load_csv(PREDICT_DATA_PATH, encoding=self.pd_encoding, sep=self.pd_sep)
 
@@ -80,7 +80,7 @@ class ClassificationPipeline(BasePipeline):
 
     def load_and_preprocess_fit(self, TRAIN_DATA_PATH:PathOrStr = None, data = None):
 
-        if not data:
+        if data.__class__ == type(None):
             print('loading data...')
             data = load_csv(TRAIN_DATA_PATH, encoding=self.pd_encoding, sep=self.pd_sep)
 
