@@ -8,7 +8,7 @@ from src.validation import classification_validation
 from src.data.io.loader import load_csv
 from src.data.io.saver import make_fastai_serializable
 from src.preprocessing.consistency import classification_consistency_train_val
-from src.preprocessing.preprocess import drop_dependent_nan, df_split
+from src.preprocessing.preprocess import drop_dependent_nan, df_split, str_caster
 from src.models.model_utils import create_multiclass_db, create_multiclass_learner, fit_learner, tolist, get_preds_new_data, get_model_ready_to_validate
 
 
@@ -76,6 +76,14 @@ class ClassificationPipeline(BasePipeline):
 
         # feature eng can be defined via heritance
         data = self.build_features(data)
+
+        return data
+
+    def load_and_preprocess_validate(self, VALIDATE_DATA_PATH: PathOrStr = None, data=None):
+        self.load_and_preprocess_predict(VALIDATE_DATA_PATH,data)
+        #keep NaNs
+        # cast labels to str
+        data = str_caster(data, self.dependent_vars)
         return data
 
     def load_and_preprocess_fit(self, TRAIN_DATA_PATH:PathOrStr = None, data = None):
@@ -87,9 +95,11 @@ class ClassificationPipeline(BasePipeline):
         # feature eng can be defined via heritance
         data = self.build_features(data)
 
+        #drop label nans
         print('dropping NaNs...')
         data = drop_dependent_nan(data, self.dependent_vars)
-
+        #cast labels to str
+        data = str_caster(data, self.dependent_vars)
         print('Splitting data...')
         if self.date_col:
             data[self.date_col] = pd.to_datetime(data[self.date_col], errors = 'coerce')
@@ -106,15 +116,17 @@ class ClassificationPipeline(BasePipeline):
 
         ## remove unseen (in train) labels from validation set # src\consistency\classification_consistency_train_val
         train_data, val_data = classification_consistency_train_val(train_data, val_data, self.dependent_vars)
-
-        # create databunch
-        db = create_multiclass_db(train_data, val_data, self.cat_features, self.num_features, self.dependent_vars, self.fastai_bs)
-        return db
+        # little tweak to make fastai robust to nans on validation set
+        train_data = train_data.append(train_data[self.dependent_vars].mode())
+        return train_data, val_data, test_data
 
     def fit(self, TRAIN_DATA_PATH = None, data = None):
-        db = self.load_and_preprocess_fit(TRAIN_DATA_PATH = TRAIN_DATA_PATH, data = data)
-        # create learner
+        train_data, val_data, test_data = self.load_and_preprocess_fit(TRAIN_DATA_PATH = TRAIN_DATA_PATH, data = data)
+        # create databunch
+        db = create_multiclass_db(train_data, val_data, self.cat_features, self.num_features, self.dependent_vars,
+                                  self.fastai_bs)
 
+        # create learner
         self.learner = create_multiclass_learner(
             db,
             self.fastai_layers_setup,
@@ -130,8 +142,8 @@ class ClassificationPipeline(BasePipeline):
 
     def validate(self, VALIDATE_DATA_PATH = None, data = None):
         # validate model
-        learner = deepcopy(self.learner)
-        data = self.load_and_preprocess_predict(VALIDATE_DATA_PATH, data)
+        learner = deepcopy(self.learner) #make a deepcopy to avoid saving errors
+        data = self.load_and_preprocess_validate(VALIDATE_DATA_PATH, data)
         validation_dict = classification_validation.validation_dict(learner, data, self.dependent_vars[0])
         return validation_dict
 
