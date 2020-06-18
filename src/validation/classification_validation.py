@@ -31,13 +31,17 @@ def get_losses(model, df, dependent_var):
     return_df = df.assign(_LOSS=top_losses_result)
     return return_df
 
-def get_true_label_proba(y_true, proba_preds_arr):
+def get_true_label_proba(y_true_idx, proba_preds_arr):
     proba_true = []
-    for i in range(y_true.shape[0]):
+    for i in range(y_true_idx.shape[0]):
+        if y_true_idx[i] == -1:
+            proba_true.append(np.nan)
+            continue
         try:
-            proba_true.append(proba_preds_arr[i, y_true[i]])
-        except IndexError:
-            proba_true.append(0)
+            proba_true.append(proba_preds_arr[i, y_true_idx[i]])
+        except (IndexError,KeyError):
+            proba_true.append(np.nan)
+
 
     return np.array(proba_true)
 
@@ -49,7 +53,7 @@ def validation_dict(model, data, dependent_var):
     model = get_model_ready_to_validate(model, data, dependent_var)
 
     allowed_labels = list(model.data.classes)
-    unseen_classes = data[dependent_var].isin(allowed_labels)
+    unseen_classes = ~data[dependent_var].isin(allowed_labels)
     validatable = unseen_classes.mean()
 
     #
@@ -68,8 +72,10 @@ def validation_dict(model, data, dependent_var):
     # get proba for true label
     idx_to_class = dict(enumerate(classes))
     class_to_idx = {v: k for k, v in idx_to_class.items()}
-    y_true = data[dependent_var].apply(lambda x: class_to_idx[x] if x in class_to_idx else None).values
-    true_label_proba = get_true_label_proba(y_true,proba_array)
+    # tweak to make a valid INTNAN. appending nan would make the entire column float and raise error in indexing
+    y_true_idx = data[dependent_var].apply(
+        lambda x: class_to_idx[x] if x in class_to_idx else '#INTNAN')
+    true_label_proba = get_true_label_proba(y_true_idx,proba_array)
     #create validation columns
     data['_UNSEEN_CLASS'] = unseen_classes
     data['_TRUE_LABEL_PROBA'] = true_label_proba

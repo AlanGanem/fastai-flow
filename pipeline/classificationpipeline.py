@@ -80,10 +80,11 @@ class ClassificationPipeline(BasePipeline):
         return data
 
     def load_and_preprocess_validate(self, VALIDATE_DATA_PATH: PathOrStr = None, data=None):
-        self.load_and_preprocess_predict(VALIDATE_DATA_PATH,data)
+        data = self.load_and_preprocess_predict(VALIDATE_DATA_PATH,data)
         #keep NaNs
         # cast labels to str
         data = str_caster(data, self.dependent_vars)
+        print(data.dtypes)
         return data
 
     def load_and_preprocess_fit(self, TRAIN_DATA_PATH:PathOrStr = None, data = None):
