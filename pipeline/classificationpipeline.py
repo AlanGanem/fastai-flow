@@ -121,7 +121,7 @@ class ClassificationPipeline(BasePipeline):
         train_data = train_data.append(train_data[self.dependent_vars].mode())
         return train_data, val_data, test_data
 
-    def fit(self, TRAIN_DATA_PATH = None, data = None):
+    def fit(self, TRAIN_DATA_PATH = None, data = None, generate_validation_dict = False):
         train_data, val_data, test_data = self.load_and_preprocess_fit(TRAIN_DATA_PATH = TRAIN_DATA_PATH, data = data)
         # create databunch
         db = create_multiclass_db(train_data, val_data, self.cat_features, self.num_features, self.dependent_vars,
@@ -139,6 +139,10 @@ class ClassificationPipeline(BasePipeline):
         db.show_batch()
         # fit learner
         fit_learner(self.learner, self.fastai_cycles)
+
+        if generate_validation_dict == True:
+            test_validation_dict = self.validate(data = test_data)
+            return test_validation_dict
         return self
 
     def validate(self, VALIDATE_DATA_PATH = None, data = None):
@@ -169,5 +173,15 @@ class ClassificationPipeline(BasePipeline):
     def save(self, path, file_name):
         self.learner = make_fastai_serializable(self.learner)
         super().save(path,file_name)
+
+    def keep_trainning(self, TRAIN_DATA_PATH = None, data = None):
+        train_data, val_data, test_data = self.load_and_preprocess_fit(TRAIN_DATA_PATH=TRAIN_DATA_PATH, data=data)
+        # create databunch
+        db = create_multiclass_db(train_data, val_data, self.cat_features, self.num_features, self.dependent_vars,
+                                  self.fastai_bs)
+        #keep training
+        self.learner.data = db
+        fit_learner(self.learner, self.fastai_cycles)
+        return self
 
 

@@ -25,6 +25,9 @@ class BasePipeline:
     def load_and_preprocess_predict(self):
         raise NotImplementedError
 
+    def load_and_preprocess_validate(self):
+        raise NotImplementedError
+
     def fit(self):
         raise NotImplementedError
 
@@ -32,5 +35,8 @@ class BasePipeline:
         raise NotImplementedError
 
     def validate(self):
+        raise NotImplementedError
+
+    def keep_trainning(self):
         raise NotImplementedError
 
