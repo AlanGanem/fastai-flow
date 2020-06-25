@@ -150,6 +150,7 @@ class ClassificationPipeline(BasePipeline):
         learner = deepcopy(self.learner) #make a deepcopy to avoid saving errors
         data = self.load_and_preprocess_validate(VALIDATE_DATA_PATH, data)
         validation_dict = classification_validation.validation_dict(learner, data, self.dependent_vars[0])
+
         return validation_dict
 
     def predict(self, PREDICT_DATA_PATH:PathOrStr = None, data:Union[pd.DataFrame,None] = None):

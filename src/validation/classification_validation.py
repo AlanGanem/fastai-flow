@@ -34,10 +34,10 @@ def get_losses(model, df, dependent_var):
 def get_true_label_proba(y_true_idx, proba_preds_arr):
     proba_true = []
     for i in range(y_true_idx.shape[0]):
-        if y_true_idx[i] == -1:
-            proba_true.append(np.nan)
-            continue
         try:
+            if y_true_idx[i] == -1:
+                proba_true.append(np.nan)
+                continue
             proba_true.append(proba_preds_arr[i, y_true_idx[i]])
         except (IndexError,KeyError):
             proba_true.append(np.nan)
@@ -75,7 +75,11 @@ def validation_dict(model, data, dependent_var):
     # tweak to make a valid INTNAN. appending nan would make the entire column float and raise error in indexing
     y_true_idx = data[dependent_var].apply(
         lambda x: class_to_idx[x] if x in class_to_idx else '#INTNAN')
+
     true_label_proba = get_true_label_proba(y_true_idx,proba_array)
+    
+    
+
     #create validation columns
     data['_UNSEEN_CLASS'] = unseen_classes
     data['_TRUE_LABEL_PROBA'] = true_label_proba
@@ -84,6 +88,7 @@ def validation_dict(model, data, dependent_var):
     data['_GOT_RIGHT'] = data[dependent_var] == data['_CLASS_PREDS']
     accuracy = data['_GOT_RIGHT'].mean()#model.validate()
     expected_accuracy = data['_CLASS_PROBA'].mean()
+
     ## create column for losses and sort for top losses
     #data = get_losses(model, data, dependent_var)
     # efficiency performance

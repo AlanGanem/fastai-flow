@@ -1,3 +1,5 @@
 __pycache__/
+mock_data/
+*.pkl
 venv/
 *.csv

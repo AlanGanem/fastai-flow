@@ -1,5 +1,7 @@
+import json
 import pandas as pd
 from pipeline import ClassificationPipeline
+from src.data.io.saver import export_dict_as_folder
 
 
 def train():
@@ -24,17 +26,23 @@ def train():
 	        #'TpImposto':,
 	        'UFUnd':10
 	    },
-	    'fastai_bs':512
+	    'fastai_bs':40
 	}
 
 
 	model = ClassificationPipeline(**model_setup)
 
-	PATH = 'mock_data/clusters_0106.csv'
+	DATA_PATH = r'mock_data/history_01_2019_06_2020_W1.csv'
 
-	model.fit(PATH)
+	export_dict_as_folder(
+		model.fit(DATA_PATH, generate_validation_dict = True),
+		saving_path = 'mock_data', 
+		folder_name = 'complete_dataset'
+		)
 
 	model.save(r'models/.', 'teste_iva.pkl')
+	return
+
 
 if __name__ == '__main__':
 	train()
