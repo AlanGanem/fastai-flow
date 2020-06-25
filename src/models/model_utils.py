@@ -38,6 +38,8 @@ def create_multiclass_learner(
             min_delta=fastai_min_delta,
             patience=fastai_patience)]
     )
+    #TODO: include prameter for loss function
+    #learner.loss_fn = F.kl_div#F.smooth_l1_loss
     return learner
 
 def create_multiclass_db(train_data, val_data, cat_features, num_features,dependent_vars, fastai_bs):

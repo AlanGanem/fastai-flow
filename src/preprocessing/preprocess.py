@@ -87,3 +87,7 @@ def drop_dependent_nan(df, dependent_vars):
     df = df.dropna(subset=dependent_vars)
     return df
 
+def str_caster(df, cols):
+    for col in cols:
+        df[col] = df[col].astype(str)
+    return df
