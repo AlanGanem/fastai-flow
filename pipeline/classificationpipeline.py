@@ -105,9 +105,10 @@ class ClassificationPipeline(BasePipeline):
         if self.date_col:
             data[self.date_col] = pd.to_datetime(data[self.date_col], errors = 'coerce')
         total_len = data.shape[0]
-        train_data, test_data = df_split(data, train_frac=self.train_frac_split, date_col=self.date_col,
+        train_frac = self.train_frac_split**0.5
+        train_data, test_data = df_split(data, train_frac= train_frac, date_col=self.date_col,
                                          test_days=None, start_from=None)
-        train_data, val_data = df_split(train_data, train_frac=self.train_frac_split, date_col=self.date_col,
+        train_data, val_data = df_split(train_data, train_frac = train_frac, date_col=self.date_col,
                                         test_days=None, start_from=None)
         # print size fractions
         print('train size: {}%\nvalidation size: {}%\ntest size: {}%'.format(

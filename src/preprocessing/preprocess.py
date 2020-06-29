@@ -68,7 +68,7 @@ def find_date_split_from_frac(date_data, train_frac):
     unique_sorted = sorted_dates.sort_values().unique()
     assert unique_sorted.shape[0] > 1
 
-    suboptimal_split_date = sorted_dates.iloc[int((1 - train_frac) * sorted_dates.shape[0])]
+    suboptimal_split_date = sorted_dates.iloc[int((train_frac) * sorted_dates.shape[0])]
     idx = list(unique_sorted).index(suboptimal_split_date)
     date_p1 = unique_sorted[idx + 1]
     date_m1 = unique_sorted[idx - 1]

@@ -34,9 +34,6 @@ def get_losses(model, df, dependent_var):
 def get_true_label_proba(y_true_idx, proba_preds_arr):
     proba_true = []
     for i in range(y_true_idx.shape[0]):
-        if y_true_idx[i] == -1:
-            proba_true.append(np.nan)
-            continue
         try:
             proba_true.append(proba_preds_arr[i, y_true_idx[i]])
         except (IndexError,KeyError):
