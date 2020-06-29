@@ -1,4 +1,3 @@
-import json
 import pandas as pd
 from pipeline import ClassificationPipeline
 from src.data.io.saver import export_dict_as_folder
@@ -12,27 +11,33 @@ def train():
 	    'dependent_vars': 'IVAMIRO',
 	    'cat_features': ['IVAPC','PEP','Filial','Material','UF','TpImposto','UFUnd'],
 	    'num_features': [],
-	    'train_frac_split':0.7,
+	    'train_frac_split':0.9,
 	    'pd_encoding':'utf-8',
 	    'pd_sep':',',
 	    'date_col':None,
 	    'fastai_cycles':12,
 	    'cat_emb_szs': {
-	        'IVAPC':10,
-	        #'PEP': 2,
-	        'Filial':10,
-	        'Material':40,
-	        'UF': 10,
-	        #'TpImposto':,
-	        'UFUnd':10
+	        'IVAPC':8,
+	        'Fornecedor': 2,
+	        'Filial':2,
+	        'Material':10,
+	        'UF': 5,
+	        'TpImposto': 2,
+	        'UFUnd':5,
+	        'OrgC': 2,
+	        'GCm': 2
 	    },
-	    'fastai_bs':40
+	    'fastai_bs':512
 	}
+
+
 
 
 	model = ClassificationPipeline(**model_setup)
 
-	DATA_PATH = r'mock_data/history_01_2019_06_2020_W1.csv'
+	DATA_PATH = r'mock_data/complete_dataset.csv'
+
+	# model.fit(PATH, generate_report=False)
 
 	export_dict_as_folder(
 		model.fit(DATA_PATH, generate_validation_dict = True),
@@ -40,7 +45,7 @@ def train():
 		folder_name = 'complete_dataset'
 		)
 
-	model.save(r'models/.', 'teste_iva.pkl')
+	# model.save(r'models/.', 'completo_menor.pkl')
 	return
 
 
