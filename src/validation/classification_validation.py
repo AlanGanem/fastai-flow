@@ -41,24 +41,52 @@ def get_true_label_proba(y_true_idx_list, proba_preds_arr):
 
     return np.array(proba_true)
 
-def validation_dict(model, data, dependent_var):
-    #creates a dictionary with multiple validation artifacts
-    data = data.copy()
+def calibration_curve(data):
+    thresh = np.linspace(0, 1, 101)
+    proba_dists = [data['_CLASS_PROBA'].between(i,i+.01) for i in thresh]
+    density = pd.Series(i.mean() for i in proba_dists)
+    acc = pd.Series([data[msk]['_GOT_RIGHT'].mean() for msk in proba_dists])
+    efficiency_df = pd.DataFrame([thresh,acc,density]).T
+    efficiency_df.columns = ['probability',
+                             'accuracy','density']
+    return efficiency_df
 
+
+def classification_report_df(y_true, y_pred):
+    cls_report = classification_report(
+        y_true=y_true,
+        y_pred=y_pred,
+        output_dict=True)
+    classification_report_df = pd.DataFrame(cls_report).T
+    return classification_report_df
+
+
+def confusion_df(y_true, y_pred, labels):
+    cfs_mtrx = confusion_matrix(
+        y_true=y_true,
+        y_pred=y_pred,
+        labels=model.data.classes
+    )
+    confusion_df = pd.DataFrame(cfs_mtrx, columns=labels, index=labels)
+    return confusion_df
+
+def validation_dict(
+        model,
+        data,
+        dependent_var,
+        reports = ['calibration_curve','pareto_raking','sklearn_classification_report','confusion_matrix']
+):
+    #creates a dictionary with multiple validation reports
+    data = data.copy()
+    val_dict = {}
     #Fill validation NaNs with str "NaN"
     data[dependent_var] = data[dependent_var].fillna('NaN')
     model = get_model_ready_to_validate(model, data, dependent_var)
     # check labels known by the model (in case there are new labels)
     allowed_labels = list(model.data.classes)
     unseen_classes_msk = ~data[dependent_var].isin(allowed_labels)
-    validatable = unseen_classes_msk.mean()
-
-    #
-    #interp = ClassificationInterpretation.from_learner(model, ds_type = DatasetType.Valid)
+    unseen_classes_mean = unseen_classes_msk.mean()
     classes = model.data.classes
-    #confusion_df = pd.DataFrame(interp.confusion_matrix(), columns = classes, index = classes)
-    #most_confused_df = pd.DataFrame(interp.most_confused(), columns = ['actual','predicted','occurrences'])
-
 
     ## make predictions
     preds = get_preds_new_data(model,data)
@@ -67,13 +95,10 @@ def validation_dict(model, data, dependent_var):
     proba_array = preds['arr_proba_preds']
 
     # get proba for true label
-    if 'true_label_proba':
-        idx_to_class = dict(enumerate(classes))
-        class_to_idx = {v: k for k, v in idx_to_class.items()}
-        # tweak to make a valid INTNAN. appending nan would make the entire column float and raise error in indexing
-        labels_list = data[dependent_var].values.tolist()
-        y_true_idx_list = [class_to_idx[i] if i in class_to_idx else np.nan for i in data[dependent_var].values.tolist()]
-        true_label_proba = get_true_label_proba(y_true_idx_list,proba_array)
+    idx_to_class = dict(enumerate(classes))
+    class_to_idx = {v: k for k, v in idx_to_class.items()}
+    y_true_idx_list = [class_to_idx[i] if i in class_to_idx else np.nan for i in data[dependent_var].values.tolist()]
+    true_label_proba = get_true_label_proba(y_true_idx_list,proba_array)
 
     #create validation columns
     data['_UNSEEN_CLASS'] = unseen_classes_msk
@@ -81,45 +106,25 @@ def validation_dict(model, data, dependent_var):
     data['_CLASS_PREDS'] = class_preds
     data['_CLASS_PROBA'] = proba_preds
     data['_GOT_RIGHT'] = (data[dependent_var] == data['_CLASS_PREDS']).astype(int)
-    accuracy = data['_GOT_RIGHT'].mean()#model.validate()
+    accuracy = data['_GOT_RIGHT'].mean()#learner.validate() for custom metric
     expected_accuracy = data['_CLASS_PROBA'].mean()
-    ## create column for losses and sort for top losses
-    #data = get_losses(model, data, dependent_var)
-    # efficiency performance
-    total = data.shape[0]
-    thresh = np.linspace(0, 1, 101)
-    eff = [data[data['_CLASS_PROBA'] >= i]['_GOT_RIGHT'].sum() / total for i in thresh]
-    efficiency_df = pd.DataFrame([thresh,eff]).T
-    efficiency_df.columns = ['threshold','accuracy']
+    #append to dict
+    val_dict['accuracy'] = accuracy
+    val_dict['expected_accuracy'] = expected_accuracy
+    val_dict['data_df'] = data
+    val_dict['unseen_labels'] = unseen_classes_mean
 
-    # make ranking pareto
-    pareto_raking_df = pareto_ranking(data[dependent_var].values, proba_array, classes)[1]
-
-    #make label-wise classification repport (sklearn)
-
-    cls_report = classification_report(
+    # extra reports
+    if 'calibration_curve' in reports:
+        val_dict['calibration_curve_df'] = calibration_curve(data)
+    if 'pareto_raking_df' in reports:
+        val_dict['pareto_raking_df'] = pareto_ranking(data[dependent_var].values, proba_array, classes)[1]
+    if 'sklearn_classification_report' in reports:
+        #make label-wise classification repport (sklearn)
         y_true = data[dependent_var].values.flatten(),
-        y_pred = np.array(class_preds).flatten(),
-        output_dict = True)
-    classification_report_df = pd.DataFrame(cls_report).T
+        y_pred = data['_CLASS_PREDS'].flatten(),
+        val_dict['classification_report_df'] = classification_report_df(y_true, y_pred)
+    if 'confusion_matrix' in reports:
+        val_dict['confusion_matrix_df'] = confusion_df(y_true, y_pred, labels = model.data.classes)
 
-    cfs_mtrx = confusion_matrix(
-        y_true=data[dependent_var].values.flatten(),
-        y_pred=np.array(class_preds).flatten(),
-        labels = model.data.classes
-    )
-
-    confusion_df = pd.DataFrame(cfs_mtrx, columns=model.data.classes, index=model.data.classes)
-
-    return {
-        'classification_report_df':classification_report_df,
-        'pareto_ranking_df':pareto_raking_df,
-        'efficiency_df':efficiency_df,
-        #'most_confused_df':most_confused_df,
-        'confusion_df':confusion_df,
-        'accuracy':accuracy ,
-        #'loss': accuracy[1].item(),
-        'expected_accuracy':expected_accuracy,
-        'data_df': data,
-        'validation_class_consistency':validatable
-    }
+    return val_dict
