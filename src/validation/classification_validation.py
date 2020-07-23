@@ -31,27 +31,27 @@ def get_losses(model, df, dependent_var):
     return_df = df.assign(_LOSS=top_losses_result)
     return return_df
 
-def get_true_label_proba(y_true_idx, proba_preds_arr):
+def get_true_label_proba(y_true_idx_list, proba_preds_arr):
     proba_true = []
-    for i in range(y_true_idx.shape[0]):
+    for i in range(len(y_true_idx_list)):
         try:
-            proba_true.append(proba_preds_arr[i, y_true_idx[i]])
+            proba_true.append(proba_preds_arr[i, y_true_idx_list[i]])
         except (IndexError,KeyError):
             proba_true.append(np.nan)
-
 
     return np.array(proba_true)
 
 def validation_dict(model, data, dependent_var):
-    #creates a dictionary with multiple validation artefacts
+    #creates a dictionary with multiple validation artifacts
     data = data.copy()
 
+    #Fill validation NaNs with str "NaN"
     data[dependent_var] = data[dependent_var].fillna('NaN')
     model = get_model_ready_to_validate(model, data, dependent_var)
-
+    # check labels known by the model (in case there are new labels)
     allowed_labels = list(model.data.classes)
-    unseen_classes = ~data[dependent_var].isin(allowed_labels)
-    validatable = unseen_classes.mean()
+    unseen_classes_msk = ~data[dependent_var].isin(allowed_labels)
+    validatable = unseen_classes_msk.mean()
 
     #
     #interp = ClassificationInterpretation.from_learner(model, ds_type = DatasetType.Valid)
@@ -60,25 +60,27 @@ def validation_dict(model, data, dependent_var):
     #most_confused_df = pd.DataFrame(interp.most_confused(), columns = ['actual','predicted','occurrences'])
 
 
-    ## make metrics plot
+    ## make predictions
     preds = get_preds_new_data(model,data)
-
     class_preds = preds['class_preds']
     proba_preds = preds['proba_preds']
     proba_array = preds['arr_proba_preds']
+
     # get proba for true label
-    idx_to_class = dict(enumerate(classes))
-    class_to_idx = {v: k for k, v in idx_to_class.items()}
-    # tweak to make a valid INTNAN. appending nan would make the entire column float and raise error in indexing
-    y_true_idx = data[dependent_var].apply(
-        lambda x: class_to_idx[x] if x in class_to_idx else '#INTNAN')
-    true_label_proba = get_true_label_proba(y_true_idx,proba_array)
+    if 'true_label_proba':
+        idx_to_class = dict(enumerate(classes))
+        class_to_idx = {v: k for k, v in idx_to_class.items()}
+        # tweak to make a valid INTNAN. appending nan would make the entire column float and raise error in indexing
+        labels_list = data[dependent_var].values.tolist()
+        y_true_idx_list = [class_to_idx[i] if i in class_to_idx else np.nan for i in data[dependent_var].values.tolist()]
+        true_label_proba = get_true_label_proba(y_true_idx_list,proba_array)
+
     #create validation columns
-    data['_UNSEEN_CLASS'] = unseen_classes
+    data['_UNSEEN_CLASS'] = unseen_classes_msk
     data['_TRUE_LABEL_PROBA'] = true_label_proba
     data['_CLASS_PREDS'] = class_preds
     data['_CLASS_PROBA'] = proba_preds
-    data['_GOT_RIGHT'] = data[dependent_var] == data['_CLASS_PREDS']
+    data['_GOT_RIGHT'] = (data[dependent_var] == data['_CLASS_PREDS']).astype(int)
     accuracy = data['_GOT_RIGHT'].mean()#model.validate()
     expected_accuracy = data['_CLASS_PROBA'].mean()
     ## create column for losses and sort for top losses

@@ -9,13 +9,13 @@ def tolist(x):
     return x
     
 
-def fit_learner(learner, fastai_cycles):
+def fit_learner(learner, fastai_cycles, **fitargs):
     # find best learning rate
     # learner.lr_find()
     # learner.recorder.plot()
     # lr = 2 * 1e-2
     # fit
-    learner.fit_one_cycle(fastai_cycles)
+    learner.fit_one_cycle(fastai_cycles, **{k:v for k,v in fitargs.items() if v})
     return learner
 
 def create_multiclass_learner(

@@ -1,7 +1,7 @@
-iva-apfj
+Fast.ai flow
 ==============================
 
-iva classification
+An unified framework for supervised learning problems
 
 Project Organization
 ------------

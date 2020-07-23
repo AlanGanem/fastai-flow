@@ -11,7 +11,7 @@ from src.preprocessing.consistency import classification_consistency_train_val
 from src.preprocessing.preprocess import drop_dependent_nan, df_split, str_caster
 from src.models.model_utils import create_multiclass_db, create_multiclass_learner, fit_learner, tolist, get_preds_new_data, get_model_ready_to_validate
 
-
+#TODO: set custom validation metric
 class ClassificationPipeline(BasePipeline):
 
     def __init__(
@@ -21,6 +21,7 @@ class ClassificationPipeline(BasePipeline):
             num_features,
             dependent_vars,
             train_frac_split,
+            external_references=None,
             date_col = None,
             fastai_layers_setup=[20],
             fastai_dropout=0.1,
@@ -29,6 +30,7 @@ class ClassificationPipeline(BasePipeline):
             fastai_bs=256,
             fastai_patience=3,
             fastai_min_delta=0.001,
+            fastai_lr = None,
             validate=True,
             # loading args
             pd_sep=';',
@@ -39,16 +41,16 @@ class ClassificationPipeline(BasePipeline):
             **kwargs
     ):
 
-        super().__init__(model_id)
+        super().__init__(model_id,external_references)
         self.kwargs = kwargs
         self.fastai_layers_setup = tolist(fastai_layers_setup)
         self.fastai_dropout = fastai_dropout
-        # TODO create optional param for embedding size setup (allow optimization)
         self.cat_emb_szs = cat_emb_szs
         self.fastai_cycles = fastai_cycles
         self.fastai_bs = fastai_bs
         self.fastai_patience = fastai_patience
         self.fastai_min_delta = fastai_min_delta
+        self.fastai_lr = fastai_lr
         # loading args
         self.pd_sep = pd_sep
         self.pd_encoding = pd_encoding
@@ -62,11 +64,6 @@ class ClassificationPipeline(BasePipeline):
         self.num_features = tolist(num_features)
         self.date_col = date_col
         return
-
-    def build_features(self, data):
-        # feature engeineering can be defined inheriting (class CustomPipe(ClassificationPipeline))
-        # and the method build features must be overwritten, taking df and outputting df.
-        return data
 
     def load_and_preprocess_predict(self, PREDICT_DATA_PATH:PathOrStr = None, data = None):
 
@@ -139,19 +136,24 @@ class ClassificationPipeline(BasePipeline):
         )
         db.show_batch()
         # fit learner
-        fit_learner(self.learner, self.fastai_cycles)
+        fit_learner(self.learner, self.fastai_cycles, max_lr = self.fastai_lr)
 
         if generate_validation_dict == True:
             test_validation_dict = self.validate(data = test_data)
             return test_validation_dict
         return self
 
-    def validate(self, VALIDATE_DATA_PATH = None, data = None):
+    def validate(self,VALIDATE_DATA_PATH = None, data = None, full_validation = True):
+        #make copy of learner to avoid overwritting important states
+        learner = deepcopy(self.learner)  # make a deepcopy to avoid saving errors
+        # validate online
+        if not full_validation:
+            return get_model_ready_to_validate(learner,data,self.dependent_vars[0]).validate()
         # validate model
-        learner = deepcopy(self.learner) #make a deepcopy to avoid saving errors
-        data = self.load_and_preprocess_validate(VALIDATE_DATA_PATH, data)
-        validation_dict = classification_validation.validation_dict(learner, data, self.dependent_vars[0])
-        return validation_dict
+        else:
+            data = self.load_and_preprocess_validate(VALIDATE_DATA_PATH, data)
+            validation_dict = classification_validation.validation_dict(learner, data, self.dependent_vars[0])
+            return validation_dict
 
     def predict(self, PREDICT_DATA_PATH:PathOrStr = None, data:Union[pd.DataFrame,None] = None):
         learner = deepcopy(self.learner)
