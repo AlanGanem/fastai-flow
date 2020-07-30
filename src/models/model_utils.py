@@ -1,5 +1,22 @@
 from fastai import *
 from fastai.tabular import *
+from fastai import metrics
+from functools import partial
+
+def fastai_metric_from_str(metric_str, **opt_args):
+    '''
+    See more on the metrics documentation in https://docs.fast.ai/metrics.html
+    :param metric_str:
+    :param opt_args:
+    :return:
+    '''
+    try:
+        metric_obj = getattr(metrics,metric_str)
+        if metric_obj.__class__ == type:
+            return metric_obj(**opt_args)
+        else:
+            return partial(metric_obj, **opt_args)
+    except AttributeError:raise AttributeError(f'metric should be one of {metrics.__all__}')
 
 def tolist(x):
     if x.__class__ in [list, tuple, set, dict]:
@@ -19,22 +36,24 @@ def fit_learner(learner, fastai_cycles, **fitargs):
     return learner
 
 def create_multiclass_learner(
-        db,
-        fastai_layers_setup,
-        cat_emb_szs,
-        fastai_dropout,
-        fastai_min_delta,
-        fastai_patience,
+        db: DataBunch,
+        metric: AnyStr,
+        fastai_layers_setup: List,
+        cat_emb_szs:Dict,
+        fastai_dropout:Floats,
+        fastai_min_delta:Floats,
+        fastai_patience:IntOrTensor,
+        metric_args = {}
 ):
     learner = tabular_learner(
         db,
         layers=fastai_layers_setup,
         emb_szs=cat_emb_szs,
         emb_drop=fastai_dropout,
-        metrics=[accuracy],
+        metrics=[fastai_metric_from_str(metric,**metric_args)],
         callback_fns=[partial(
             callbacks.tracker.EarlyStoppingCallback,
-            monitor='accuracy',
+            monitor=metric,
             min_delta=fastai_min_delta,
             patience=fastai_patience)]
     )

@@ -81,7 +81,6 @@ class ClassificationPipeline(BasePipeline):
         #keep NaNs
         # cast labels to str
         data = str_caster(data, self.dependent_vars)
-        print(data.dtypes)
         return data
 
     def load_and_preprocess_fit(self, TRAIN_DATA_PATH:PathOrStr = None, data = None):
@@ -119,7 +118,7 @@ class ClassificationPipeline(BasePipeline):
         train_data = train_data.append(train_data[self.dependent_vars].mode())
         return train_data, val_data, test_data
 
-    def fit(self, TRAIN_DATA_PATH = None, data = None, generate_validation_dict = False):
+    def fit(self, TRAIN_DATA_PATH = None, data = None, generate_validation_dict = False, metric = 'accuracy', metric_args = {}):
         train_data, val_data, test_data = self.load_and_preprocess_fit(TRAIN_DATA_PATH = TRAIN_DATA_PATH, data = data)
         # create databunch
         db = create_multiclass_db(train_data, val_data, self.cat_features, self.num_features, self.dependent_vars,
@@ -128,11 +127,13 @@ class ClassificationPipeline(BasePipeline):
         # create learner
         self.learner = create_multiclass_learner(
             db,
+            metric,
             self.fastai_layers_setup,
             self.cat_emb_szs,
             self.fastai_dropout,
             self.fastai_min_delta,
             self.fastai_patience,
+            metric_args = metric_args
         )
         db.show_batch()
         # fit learner
