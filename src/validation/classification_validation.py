@@ -65,7 +65,7 @@ def confusion_df(y_true, y_pred, labels):
     cfs_mtrx = confusion_matrix(
         y_true=y_true,
         y_pred=y_pred,
-        labels=model.data.classes
+        labels=labels
     )
     confusion_df = pd.DataFrame(cfs_mtrx, columns=labels, index=labels)
     return confusion_df
@@ -121,8 +121,8 @@ def validation_dict(
         val_dict['pareto_raking_df'] = pareto_ranking(data[dependent_var].values, proba_array, classes)[1]
     if 'sklearn_classification_report' in reports:
         #make label-wise classification repport (sklearn)
-        y_true = data[dependent_var].values.flatten(),
-        y_pred = data['_CLASS_PREDS'].flatten(),
+        y_true = data[dependent_var].values.flatten()
+        y_pred = data['_CLASS_PREDS'].values.flatten()
         val_dict['classification_report_df'] = classification_report_df(y_true, y_pred)
     if 'confusion_matrix' in reports:
         val_dict['confusion_matrix_df'] = confusion_df(y_true, y_pred, labels = model.data.classes)

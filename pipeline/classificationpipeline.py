@@ -93,7 +93,7 @@ class ClassificationPipeline(BasePipeline):
         data = self.build_features(data)
 
         #drop label nans
-        print('dropping NaNs...')
+        print('dropping NaN labels...')
         data = drop_dependent_nan(data, self.dependent_vars)
         #cast labels to str
         data = str_caster(data, self.dependent_vars)
@@ -118,12 +118,19 @@ class ClassificationPipeline(BasePipeline):
         train_data = train_data.append(train_data[self.dependent_vars].mode())
         return train_data, val_data, test_data
 
-    def fit(self, TRAIN_DATA_PATH = None, data = None, generate_validation_dict = False, metric = 'accuracy', metric_args = {}):
+    def fit(self, TRAIN_DATA_PATH = None, data = None, generate_validation_dict = False, metric = 'accuracy',
+            metric_args = {}, sample_weights_col = None):
         train_data, val_data, test_data = self.load_and_preprocess_fit(TRAIN_DATA_PATH = TRAIN_DATA_PATH, data = data)
         # create databunch
         db = create_multiclass_db(train_data, val_data, self.cat_features, self.num_features, self.dependent_vars,
                                   self.fastai_bs)
 
+        if sample_weights_col:
+            sampler = torch.utils.data.sampler.WeightedRandomSampler(
+                train_data[sample_weights_col].fillna(0),train_data.shape[0])
+
+            # set sampler to train_dl
+            db.train_dl = db.train_dl.new(shuffle=False, sampler=sampler)
         # create learner
         self.learner = create_multiclass_learner(
             db,
